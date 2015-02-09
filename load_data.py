@@ -7,7 +7,7 @@ from scipy.misc import imresize
 import matplotlib.pyplot as plt
 
 
-def load_color(random_seed=123522):
+def load_color(reshaped=True, random_seed=123522):
     # Check if dataset is in the data directory.
     data_path = os.path.join(os.path.split(__file__)[0], "data")
     if not os.path.exists(data_path):
@@ -24,7 +24,7 @@ def load_color(random_seed=123522):
             urllib.urlretrieve('http://google.com')
         except AttributeError:
             import urllib.request as urllib
-            url ='https://dl.dropboxusercontent.com/u/15378192/train.zip'
+        url = 'https://dl.dropboxusercontent.com/u/15378192/train.zip'
         print('Downloading data from %s' % url)
         urllib.urlretrieve(url, data_file)
 
@@ -69,8 +69,13 @@ def load_color(random_seed=123522):
 
     random_state = np.random.RandomState(random_seed)
     idx = random_state.permutation(len(X))
-    X_s = X[idx].reshape(len(X), -1)
-    y_s = y[idx]
+    if reshaped:
+        X_s = X[idx].reshape(len(X), -1)
+        y_s = y[idx]
+    else:
+        X_s = X[idx]
+        X_s = X.transpose(0, 3, 1, 2)
+        y_s = y[idx]
 
     train_x = X_s[:20000]
     valid_x = X_s[20000:22500]
@@ -106,7 +111,7 @@ def load_gray(random_seed=123522):
             urllib.urlretrieve('http://google.com')
         except AttributeError:
             import urllib.request as urllib
-            url ='https://dl.dropboxusercontent.com/u/15378192/train.zip'
+        url = 'https://dl.dropboxusercontent.com/u/15378192/train.zip'
         print('Downloading data from %s' % url)
         urllib.urlretrieve(url, data_file)
 
