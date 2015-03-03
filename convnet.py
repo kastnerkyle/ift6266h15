@@ -83,7 +83,7 @@ out, l_params = conv_layer(out, filter_shape, pool_shape, stride,
                            random_state)
 params += l_params
 
-filter_shape = (128, filter_shape[0], 3, 3)
+filter_shape = (64, filter_shape[0], 3, 3)
 pool_shape = (2, 2)
 stride = (1, 1)
 out, l_params = conv_layer(out, filter_shape, pool_shape, stride,
@@ -92,11 +92,11 @@ params += l_params
 shp = out.shape
 out = out.reshape((shp[0], shp[1] * shp[2] * shp[3]))
 
-shape = (128, 64)
+shape = (64, 32)
 out, l_params = fc_layer(out, shape, random_state)
 params += l_params
 
-shape = (shape[1], 32)
+shape = (shape[1], 16)
 out, l_params = fc_layer(out, shape, random_state)
 params += l_params
 
@@ -107,7 +107,7 @@ params += l_params
 cost = softmax_cost(out, y)
 grads = tensor.grad(cost, params)
 
-minibatch_size = 100
+minibatch_size = 10
 learning_rate = 0.1 / minibatch_size
 updates = [(param_i, param_i - learning_rate * grad_i)
            for param_i, grad_i in zip(params, grads)]
