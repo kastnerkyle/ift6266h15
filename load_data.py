@@ -52,8 +52,8 @@ def load_color(random_seed=123522):
         dog_matches = sorted(dog_matches, key=sort_key)
 
         def square(X):
-            resize_shape = (128, 128)
-            slice_size = (64, 64)
+            resize_shape = (64, 64)
+            slice_size = (48, 48)
             slice_left = (resize_shape[0] - slice_size[0]) / 2
             slice_upper = (resize_shape[1] - slice_size[1]) / 2
             return imresize(X, resize_shape, interp='nearest')[
