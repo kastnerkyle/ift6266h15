@@ -18,7 +18,11 @@ def conv_layer(input_variable, filter_shape, pool_shape, stride, random_state):
     params = [filters, biases]
     conv = tensor.nnet.conv2d(input_variable, filters, subsample=stride)
     conv += biases.dimshuffle('x', 0, 'x', 'x')
-    out = _relu(conv)
+
+    # batch_normalization
+    n, n_params = normalization_layer(conv, filter_shape)
+    params += n_params
+    out = _relu(n)
     pooled = max_pool_2d(out, pool_shape, ignore_border=True)
     return pooled, params
 
@@ -30,7 +34,37 @@ def fc_layer(input_variable, layer_shape, random_state):
     np_b = np.zeros(layer_shape[1]).astype(theano.config.floatX)
     b = theano.shared(np_b)
     params = [W, b]
-    out = _relu(tensor.dot(input_variable, W) + b)
+    l = tensor.dot(input_variable, W) + b
+
+    # batch_normalization
+    n, n_params = normalization_layer(l, layer_shape)
+    params += n_params
+    out = _relu(n)
+    return out, params
+
+
+def normalization_layer(input_variable, layer_shape):
+    if len(layer_shape) == 4:
+        # conv bc01 but layer_shape is (new_c, old_c, w, h)
+        np_G = np.ones(layer_shape[0]).astype(theano.config.floatX)
+        np_B = np.zeros(layer_shape[0]).astype(theano.config.floatX)
+        G = theano.shared(np_G)
+        B = theano.shared(np_B)
+        normed = (input_variable - input_variable.mean(
+            axis=(0, 2, 3), keepdims=True)) / (input_variable.std(
+                axis=(0, 2, 3), keepdims=True) + 1E-6)
+        out = G.dimshuffle('x', 0, 'x', 'x') * normed + B.dimshuffle(
+            'x', 0, 'x', 'x')
+    else:
+        np_G = np.ones(layer_shape[1]).astype(theano.config.floatX)
+        np_B = np.zeros(layer_shape[1]).astype(theano.config.floatX)
+        G = theano.shared(np_G)
+        B = theano.shared(np_B)
+        normed = (input_variable - input_variable.mean(
+            axis=0, keepdims=True)) / (input_variable.std(
+                axis=0, keepdims=True) + 1E-6)
+        out = G * normed + B
+    params = [G, B]
     return out, params
 
 
@@ -78,6 +112,9 @@ X_t = X_t.reshape(*shp)
 
 X = tensor.tensor4('X')
 y = tensor.ivector('y')
+X.tag.test_value = X_t[:10].astype('float32')
+y.tag.test_value = y_t[:10].astype('int32')
+
 params = []
 random_state = np.random.RandomState(1999)
 
@@ -88,14 +125,14 @@ stride = (2, 2)
 out, l_params = conv_layer(X, filter_shape, pool_shape, stride, random_state)
 params += l_params
 
-filter_shape = (64, filter_shape[0], 2, 2)
+filter_shape = (32, filter_shape[0], 2, 2)
 pool_shape = (2, 2)
 stride = (1, 1)
 out, l_params = conv_layer(out, filter_shape, pool_shape, stride,
                            random_state)
 params += l_params
 
-filter_shape = (128, filter_shape[0], 2, 2)
+filter_shape = (64, filter_shape[0], 2, 2)
 pool_shape = (2, 2)
 stride = (1, 1)
 out, l_params = conv_layer(out, filter_shape, pool_shape, stride,
@@ -104,11 +141,11 @@ params += l_params
 shp = out.shape
 out = out.reshape((shp[0], shp[1] * shp[2] * shp[3]))
 
-shape = (512, 128)
+shape = (256, 64)
 out, l_params = fc_layer(out, shape, random_state)
 params += l_params
 
-shape = (shape[1], 64)
+shape = (shape[1], 16)
 out, l_params = fc_layer(out, shape, random_state)
 params += l_params
 
@@ -120,9 +157,31 @@ cost = softmax_cost(out, y)
 grads = tensor.grad(cost, params)
 
 minibatch_size = 10
-learning_rate = 0.01 / minibatch_size
-updates = [(param_i, param_i - learning_rate * grad_i)
-           for param_i, grad_i in zip(params, grads)]
+learning_rate = 0.001 / minibatch_size
+momentum = 0.9
+
+
+class nesterov_momentum(object):
+    """
+    Special thanks to Yann D.
+    There are nice docstrings but I took them out!
+    """
+    def __init__(self, params):
+        self.mem = [theano.shared(np.zeros_like(p.get_value()))
+                    for p in params]
+
+    def updates(self, params, grads, learning_rate, momentum):
+        updates = []
+        for param, grad, memory in zip(params, grads, self.mem):
+            update = momentum * memory - learning_rate * grad
+            update2 = momentum * momentum * memory - (
+                1 + momentum) * learning_rate * grad
+            updates.append((memory, update))
+            updates.append((param, param + update2))
+        return updates
+
+nag = nesterov_momentum(params)
+updates = nag.updates(params, grads, learning_rate, momentum)
 
 train_function = theano.function([X, y], cost, updates=updates)
 predict_function = theano.function([X], out)
