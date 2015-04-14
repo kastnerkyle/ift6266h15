@@ -125,14 +125,14 @@ stride = (2, 2)
 out, l_params = conv_layer(X, filter_shape, pool_shape, stride, random_state)
 params += l_params
 
-filter_shape = (32, filter_shape[0], 2, 2)
+filter_shape = (64, filter_shape[0], 2, 2)
 pool_shape = (2, 2)
 stride = (1, 1)
 out, l_params = conv_layer(out, filter_shape, pool_shape, stride,
                            random_state)
 params += l_params
 
-filter_shape = (64, filter_shape[0], 2, 2)
+filter_shape = (128, filter_shape[0], 2, 2)
 pool_shape = (2, 2)
 stride = (1, 1)
 out, l_params = conv_layer(out, filter_shape, pool_shape, stride,
@@ -141,7 +141,7 @@ params += l_params
 shp = out.shape
 out = out.reshape((shp[0], shp[1] * shp[2] * shp[3]))
 
-shape = (256, 64)
+shape = (512, 128)
 out, l_params = fc_layer(out, shape, random_state)
 params += l_params
 
@@ -157,8 +157,8 @@ cost = softmax_cost(out, y)
 grads = tensor.grad(cost, params)
 
 minibatch_size = 10
-learning_rate = 0.001 / minibatch_size
-momentum = 0.9
+learning_rate = 0.001
+momentum = 0.95
 
 
 class nesterov_momentum(object):
@@ -203,7 +203,7 @@ for n in range(epochs):
         y_p = np.argmax(train_y_hat, axis=1)
         train_y_pred.extend(list(y_p))
     valid_y_pred = []
-    for i, j in minibatch_indices(X_t, minibatch_size, lb=20000, ub=25000):
+    for i, j in minibatch_indices(X_t, 5000, lb=20000, ub=25000):
         valid_y_hat = predict_function(X_t[i:j])
         y_p = np.argmax(valid_y_hat, axis=1)
         valid_y_pred.extend(list(y_p))
