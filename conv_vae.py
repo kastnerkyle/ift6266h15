@@ -469,9 +469,9 @@ class ConvVAE(PickleMixin):
         if not hasattr(self, "_fit_function"):
             self._setup_functions(X, random_state)
 
-        xs = random_state.randn(100, self.n_code).astype(theano.config.floatX)
-        print('TRAINING')
-        idx = random_state.randint(0, len(X), 100)
+        xs = random_state.randn(self.batch_size, self.n_code).astype(
+            theano.config.floatX)
+        idx = random_state.randint(0, len(X), self.batch_size)
         x_rec = X[idx].astype(theano.config.floatX)
         n = 0.
         for e in range(self.n_epoch):
@@ -509,8 +509,11 @@ class ConvVAE(PickleMixin):
                     os.makedirs(samples_path)
 
                 samples = self._x_given_z(xs)
-                recs = self._reconstruct(x_rec, np.ones((
-                    x_rec.shape[0], self.n_code)).astype(theano.config.floatX))
+                samples = samples[:100]
+                recs = self._reconstruct(x_rec, random_state.randn(
+                    len(x_rec), self.n_code).astype(theano.config.floatX))
+                recs = recs[:100]
+                x_rec = x_rec[:100]
 
                 img1 = bw_grid_vis(x_rec, show=False)
                 img2 = bw_grid_vis(recs, show=False)

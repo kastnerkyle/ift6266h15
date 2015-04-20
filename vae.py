@@ -356,7 +356,6 @@ class VAE(PickleMixin):
 
         xs = random_state.randn(self.batch_size, self.n_code).astype(
             theano.config.floatX)
-        print('TRAINING')
         idx = random_state.randint(0, len(X), self.batch_size)
         x_rec = X[idx].astype(theano.config.floatX)
         n = 0.
@@ -396,14 +395,14 @@ class VAE(PickleMixin):
 
                 samples = self._x_given_z(xs)
                 samples = samples[:100]
-                recs = self._reconstruct(x_rec, np.ones((
-                    x_rec.shape[0], self.n_code)).astype(theano.config.floatX))
+                recs = self._reconstruct(x_rec, random_state.randn(
+                    len(x_rec), self.n_code).astype(theano.config.floatX))
                 recs = recs[:100]
+                x_rec = x_rec[:100]
 
                 img1 = bw_grid_vis(x_rec, show=False)
                 img2 = bw_grid_vis(recs, show=False)
-                img3 = bw_grid_vis(samples,
-                                   show=False)
+                img3 = bw_grid_vis(samples, show=False)
 
                 imsave(os.path.join(samples_path, 'source.png'), img1)
                 imsave(os.path.join(samples_path, 'source_recs.png'), img2)
@@ -440,7 +439,7 @@ if __name__ == "__main__":
     trX, trY = tr
     tf = VAE(image_save_root="/Tmp/kastner/vae",
              snapshot_file="/Tmp/kastner/vae_mnist_snapshot.pkl",
-             enc_sizes=[512, 512, 256], dec_sizes=[256, 512, 512], n_code=256,
+             enc_sizes=[512, 512, 256], dec_sizes=[256, 512, 512], n_code=384,
              learning_rate=.1, momentum=0.9, n_epoch=500, batch_size=1000)
     trX = trX.astype(theano.config.floatX)
     tf.fit(trX)
